@@ -263,6 +263,21 @@
             opacity: 0.9;
         }
         
+        .test-alarm-btn {
+            padding: 8px 15px;
+            background: var(--kenya-red);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            animation: pulse 1s infinite;
+        }
+        
+        .test-alarm-btn:hover {
+            background: #990000;
+        }
+        
         .filter-bar {
             display: flex;
             gap: 10px;
@@ -709,6 +724,9 @@
                     <div class="stat-value" id="overdueTasks">0</div>
                     <div class="stat-label">Overdue</div>
                 </div>
+                <div class="stat">
+                    <button class="test-alarm-btn" onclick="testAlarm()">🔔 Test</button>
+                </div>
             </div>
             
             <div class="filter-bar">
@@ -1132,7 +1150,7 @@
         function startAlarmCheck() {
             stopAlarmCheck();
             checkOverdueTasks();
-            alarmCheckInterval = setInterval(checkOverdueTasks, 30000);
+            alarmCheckInterval = setInterval(checkOverdueTasks, 10000);
         }
         
         function stopAlarmCheck() {
@@ -1143,6 +1161,8 @@
         }
         
         async function checkOverdueTasks() {
+            if (document.getElementById('alarmModal').classList.contains('show')) return;
+            
             try {
                 const response = await fetch(`${API_URL}/tasks/overdue`, {
                     headers: getAuthHeaders()
@@ -1155,6 +1175,10 @@
             } catch (error) {
                 console.error('Error checking overdue tasks:', error);
             }
+        }
+        
+        function testAlarm() {
+            triggerAlarm({ id: 0, title: '🔔 TEST: Click to dismiss!' });
         }
         
         function triggerAlarm(task) {
@@ -1176,26 +1200,80 @@
             document.getElementById('alarmModal').classList.add('show');
             document.getElementById('screenFlash').classList.add('active');
             
-            playAlarmSong();
+            try {
+                playAlarmSong();
+                playAlarmSound();
+            } catch (e) {
+                console.error('Audio error:', e);
+            }
+            
+            startVibration();
         }
+        
+        function startVibration() {
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200, 100, 200]);
+            }
+        }
+        
+        let audioContext = null;
         
         function playAlarmSong() {
             const sound1 = document.getElementById('alarmSound1');
             const sound2 = document.getElementById('alarmSound2');
             
+            sound1.pause();
+            sound2.pause();
+            
+            let currentIndex = 0;
             const playNext = () => {
-                songIndex = (songIndex + 1) % 2;
-                const currentSound = songIndex === 0 ? sound1 : sound2;
-                const otherSound = songIndex === 0 ? sound2 : sound1;
+                const currentSound = currentIndex === 0 ? sound1 : sound2;
+                const otherSound = currentIndex === 0 ? sound2 : sound1;
                 
                 otherSound.pause();
                 otherSound.currentTime = 0;
                 
-                currentSound.loop = true;
-                currentSound.play().catch(() => {});
+                currentSound.loop = false;
+                currentSound.play().catch(e => console.log('Audio play failed:', e));
+                
+                currentSound.onended = () => {
+                    currentIndex = (currentIndex + 1) % 2;
+                    playNext();
+                };
             };
             
             playNext();
+        }
+        
+        function playAlarmSound() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 880;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+            
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.frequency.value = 1100;
+                osc2.type = 'square';
+                gain2.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc2.start(audioCtx.currentTime);
+                osc2.stop(audioCtx.currentTime + 0.5);
+            }, 500);
         }
         
         function stopAlarmSongs() {
