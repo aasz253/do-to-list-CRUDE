@@ -455,8 +455,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
             justify-content: center;
             align-items: center;
         }
@@ -465,43 +465,157 @@
             display: flex;
         }
         
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        
+        .screen-flash.active {
+            animation: flashScreen 0.5s infinite;
+        }
+        
+        @keyframes flashScreen {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(187, 0, 0, 0.3); }
+        }
+        
         .alarm-content {
-            background: var(--kenya-white);
-            padding: 30px;
-            border-radius: 15px;
+            background: linear-gradient(135deg, #fff 0%, #ffe0e0 100%);
+            padding: 40px 50px;
+            border-radius: 20px;
             text-align: center;
-            max-width: 400px;
-            border: 4px solid var(--kenya-red);
+            max-width: 500px;
+            border: 6px solid var(--kenya-red);
+            box-shadow: 0 0 50px rgba(187, 0, 0, 0.5);
+            animation: alarmPulse 0.5s infinite;
+            position: relative;
+            z-index: 10001;
+        }
+        
+        @keyframes alarmPulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 50px rgba(187, 0, 0, 0.5);
+            }
+            50% { 
+                transform: scale(1.02);
+                box-shadow: 0 0 80px rgba(187, 0, 0, 0.8);
+            }
+        }
+        
+        .alarm-icon-container {
+            position: relative;
+            display: inline-block;
         }
         
         .alarm-icon {
-            font-size: 80px;
-            animation: ring 0.5s infinite;
+            font-size: 100px;
+            animation: ring 0.3s infinite, bounce 0.5s infinite;
+            display: block;
         }
         
         @keyframes ring {
-            0%, 100% { transform: rotate(-10deg); }
-            50% { transform: rotate(10deg); }
+            0%, 100% { transform: rotate(-15deg) scale(1.1); }
+            50% { transform: rotate(15deg) scale(1.1); }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .alarm-bells {
+            position: absolute;
+            font-size: 30px;
+            animation: bellRing 0.2s infinite;
+        }
+        
+        .alarm-bells.left { left: -20px; top: 0; }
+        .alarm-bells.right { right: -20px; top: 0; }
+        
+        @keyframes bellRing {
+            0%, 100% { transform: rotate(-20deg); }
+            50% { transform: rotate(20deg); }
         }
         
         .alarm-content h2 {
             color: var(--kenya-red);
-            margin: 20px 0;
+            margin: 20px 0 10px;
+            font-size: 28px;
+            text-transform: uppercase;
+            animation: textShake 0.3s infinite;
+        }
+        
+        @keyframes textShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+        
+        .alarm-content .task-name {
+            font-size: 22px;
+            color: var(--kenya-black);
+            font-weight: bold;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border: 3px solid var(--kenya-red);
+            animation: borderPulse 0.5s infinite;
+        }
+        
+        @keyframes borderPulse {
+            0%, 100% { border-color: var(--kenya-red); }
+            50% { border-color: var(--kenya-green); }
         }
         
         .alarm-content p {
             color: #666;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            font-size: 16px;
         }
         
-        .alarm-content button {
-            padding: 12px 30px;
+        .alarm-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .alarm-content button, .alarm-content .dismiss-btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .dismiss-btn {
             background: var(--kenya-green);
             color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
+        }
+        
+        .snooze-btn {
+            background: var(--kenya-red);
+            color: white;
+        }
+        
+        .mark-complete-btn {
+            background: #FFD700;
+            color: var(--kenya-black);
+        }
+        
+        .alarm-footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #999;
         }
         
         .hidden {
@@ -610,17 +724,31 @@
         </div>
     </div>
     
+    <div id="screenFlash" class="screen-flash"></div>
+    
     <div id="alarmModal" class="alarm-modal">
         <div class="alarm-content">
-            <div class="alarm-icon">🔔</div>
-            <h2>⏰ Task Reminder!</h2>
-            <p id="alarmMessage"></p>
-            <button onclick="dismissAlarm()">Dismiss</button>
+            <div class="alarm-icon-container">
+                <span class="alarm-bells left">🔔</span>
+                <span class="alarm-icon">⏰</span>
+                <span class="alarm-bells right">🔔</span>
+            </div>
+            <h2>⚠️ TIME'S UP! ⚠️</h2>
+            <div class="task-name" id="alarmMessage">Task Name</div>
+            <p>Your task deadline has arrived!</p>
+            <div class="alarm-buttons">
+                <button class="dismiss-btn" onclick="dismissAlarm()">✓ Done</button>
+                <button class="mark-complete-btn" onclick="markCompleteAndDismiss()">✓ Mark Complete</button>
+            </div>
+            <div class="alarm-footer">Press any button to dismiss</div>
         </div>
     </div>
     
-    <audio id="alarmSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVcQNpHW+NueZVQfSXK26e2teVkYUXW08O6vfFscX3m38fCwfVsjZX+z8PGvgVwhZX+08POvhF0jan2y8PGvhWAiaXqt8PGvhWAhanyt8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu8PGvhWEgaXuu" type="audio/wav">
+    <audio id="alarmSound1" preload="auto">
+        <source src="alarm1.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="alarmSound2" preload="auto">
+        <source src="alarm2.mp3" type="audio/mpeg">
     </audio>
 
     <script>
@@ -628,6 +756,8 @@
         let currentUser = null;
         let currentFilter = 'all';
         let alarmCheckInterval = null;
+        let currentAlarmTask = null;
+        let songIndex = 0;
         
         function showAuthTab(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -1028,32 +1158,78 @@
         }
         
         function triggerAlarm(task) {
+            currentAlarmTask = task;
+            
             if (Notification.permission === 'default') {
                 Notification.requestPermission();
             }
             
             if (Notification.permission === 'granted') {
-                new Notification('🔔 Task Reminder!', {
+                new Notification('⏰ TIME\'S UP!', {
                     body: task.title,
-                    icon: '🔔',
+                    icon: '⏰',
                     requireInteraction: true
                 });
             }
             
             document.getElementById('alarmMessage').textContent = task.title;
             document.getElementById('alarmModal').classList.add('show');
+            document.getElementById('screenFlash').classList.add('active');
             
-            try {
-                document.getElementById('alarmSound').play();
-            } catch (e) {}
+            playAlarmSong();
+        }
+        
+        function playAlarmSong() {
+            const sound1 = document.getElementById('alarmSound1');
+            const sound2 = document.getElementById('alarmSound2');
+            
+            const playNext = () => {
+                songIndex = (songIndex + 1) % 2;
+                const currentSound = songIndex === 0 ? sound1 : sound2;
+                const otherSound = songIndex === 0 ? sound2 : sound1;
+                
+                otherSound.pause();
+                otherSound.currentTime = 0;
+                
+                currentSound.loop = true;
+                currentSound.play().catch(() => {});
+            };
+            
+            playNext();
+        }
+        
+        function stopAlarmSongs() {
+            const sound1 = document.getElementById('alarmSound1');
+            const sound2 = document.getElementById('alarmSound2');
+            
+            sound1.pause();
+            sound1.currentTime = 0;
+            sound2.pause();
+            sound2.currentTime = 0;
         }
         
         function dismissAlarm() {
             document.getElementById('alarmModal').classList.remove('show');
-            try {
-                document.getElementById('alarmSound').pause();
-                document.getElementById('alarmSound').currentTime = 0;
-            } catch (e) {}
+            document.getElementById('screenFlash').classList.remove('active');
+            stopAlarmSongs();
+            currentAlarmTask = null;
+        }
+        
+        async function markCompleteAndDismiss() {
+            if (currentAlarmTask) {
+                try {
+                    await fetch(`${API_URL}/tasks/${currentAlarmTask.id}`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            ...getAuthHeaders()
+                        },
+                        body: JSON.stringify({ completed: 1 })
+                    });
+                    loadTasks();
+                } catch (e) {}
+            }
+            dismissAlarm();
         }
         
         if ('Notification' in window) {
