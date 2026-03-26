@@ -962,19 +962,16 @@
         
         function formatDate(dateStr) {
             if (!dateStr) return '';
-            const parts = dateStr.split(/[-T: ]/);
+            const date = new Date(dateStr);
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const year = parts[0];
-            const month = months[parseInt(parts[1]) - 1];
-            const day = parseInt(parts[2]);
-            return `${month} ${day}, ${year}`;
+            return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
         }
         
         function formatTime(dateStr) {
             if (!dateStr) return '';
-            const parts = dateStr.split(/[-T: ]/);
-            let hours = parseInt(parts[3]);
-            const minutes = parts[4];
+            const date = new Date(dateStr);
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
             const ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
             if (hours === 0) hours = 12;
