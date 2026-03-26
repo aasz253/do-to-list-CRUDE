@@ -167,9 +167,10 @@ app.post('/api/tasks', authenticate, (req, res) => {
     }
     
     const alarmOn = alarm_enabled !== false ? 1 : 0;
+    const createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
     
-    db.run('INSERT INTO tasks (user_id, title, due_date, alarm_enabled) VALUES (?, ?, ?, ?)', 
-        [req.user.id, trimmedTitle, due_date || null, alarmOn], 
+    db.run('INSERT INTO tasks (user_id, title, due_date, alarm_enabled, created_at) VALUES (?, ?, ?, ?, ?)', 
+        [req.user.id, trimmedTitle, due_date || null, alarmOn, createdAt], 
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ 
@@ -178,7 +179,7 @@ app.post('/api/tasks', authenticate, (req, res) => {
                 due_date,
                 alarm_enabled: alarmOn,
                 completed: 0,
-                created_at: new Date().toISOString()
+                created_at: createdAt
             });
         }
     );
@@ -194,12 +195,13 @@ app.get('/api/tasks', authenticate, (req, res) => {
 
 // READ - Get tasks that are due (for alarm checking)
 app.get('/api/tasks/due', authenticate, (req, res) => {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
     db.all(`SELECT * FROM tasks 
             WHERE user_id = ? 
             AND completed = 0 
             AND alarm_enabled = 1 
             AND alarm_triggered = 0
+            AND due_date IS NOT NULL
             AND due_date <= ?`, 
         [req.user.id, now], 
         (err, rows) => {

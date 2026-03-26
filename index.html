@@ -963,19 +963,21 @@
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const date = new Date(dateStr);
-            return date.toLocaleDateString('en-KE', { 
+            return date.toLocaleDateString('en-US', { 
                 day: '2-digit', 
                 month: 'short', 
-                year: 'numeric' 
+                year: 'numeric',
+                timeZone: 'Africa/Nairobi'
             });
         }
         
         function formatTime(dateStr) {
             if (!dateStr) return '';
             const date = new Date(dateStr);
-            return date.toLocaleTimeString('en-KE', { 
+            return date.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
-                minute: '2-digit' 
+                minute: '2-digit',
+                timeZone: 'Africa/Nairobi'
             });
         }
         
