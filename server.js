@@ -149,7 +149,7 @@ app.post('/api/logout', authenticate, (req, res) => {
 
 // CREATE - Add a new task
 app.post('/api/tasks', authenticate, (req, res) => {
-    const { title, due_date, alarm_enabled } = req.body;
+    const { title, due_date, alarm_enabled, created_at } = req.body;
     
     // Validation: Prevent empty tasks
     if (!title || !title.trim()) {
@@ -167,7 +167,7 @@ app.post('/api/tasks', authenticate, (req, res) => {
     }
     
     const alarmOn = alarm_enabled !== false ? 1 : 0;
-    const createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const createdAt = created_at || new Date().toISOString().replace('T', ' ').substring(0, 19);
     
     db.run('INSERT INTO tasks (user_id, title, due_date, alarm_enabled, created_at) VALUES (?, ?, ?, ?, ?)', 
         [req.user.id, trimmedTitle, due_date || null, alarmOn, createdAt], 
