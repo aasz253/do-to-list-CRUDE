@@ -207,6 +207,19 @@
             margin-bottom: 10px;
         }
         
+        .datetime-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .datetime-field label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--kenya-black);
+        }
+        
         .datetime-row input {
             flex: 1;
             padding: 10px;
@@ -702,8 +715,14 @@
                     <button class="btn" onclick="addTask()">Add Task</button>
                 </div>
                 <div class="datetime-row">
-                    <input type="date" id="dueDate" title="Due Date">
-                    <input type="time" id="dueTime" title="Due Time">
+                    <div class="datetime-field">
+                        <label>📅 Due Date:</label>
+                        <input type="date" id="dueDate">
+                    </div>
+                    <div class="datetime-field">
+                        <label>⏰ Due Time:</label>
+                        <input type="time" id="dueTime">
+                    </div>
                 </div>
                 <div class="alarm-toggle">
                     <input type="checkbox" id="enableAlarm" checked>
@@ -1072,7 +1091,7 @@
                         'Content-Type': 'application/json',
                         ...getAuthHeaders()
                     },
-                    body: JSON.stringify({ title, due_date })
+                    body: JSON.stringify({ title, due_date, alarm_enabled: enableAlarm })
                 });
                 
                 const data = await response.json();
@@ -1164,21 +1183,27 @@
             if (document.getElementById('alarmModal').classList.contains('show')) return;
             
             try {
-                const response = await fetch(`${API_URL}/tasks/overdue`, {
+                const response = await fetch(`${API_URL}/tasks/due`, {
                     headers: getAuthHeaders()
                 });
                 const tasks = await response.json();
                 
                 if (tasks.length > 0) {
-                    triggerAlarm(tasks[0]);
+                    const task = tasks[0];
+                    triggerAlarm(task);
+                    
+                    fetch(`${API_URL}/tasks/${task.id}/trigger-alarm`, {
+                        method: 'POST',
+                        headers: getAuthHeaders()
+                    });
                 }
             } catch (error) {
-                console.error('Error checking overdue tasks:', error);
+                console.error('Error checking due tasks:', error);
             }
         }
         
         function testAlarm() {
-            triggerAlarm({ id: 0, title: '🔔 TEST: Click to dismiss!' });
+            triggerAlarm({ id: 0, title: '🔔 TEST ALARM: Click to dismiss!' });
         }
         
         function triggerAlarm(task) {

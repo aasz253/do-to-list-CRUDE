@@ -44,6 +44,8 @@ db.serialize(() => {
         title TEXT NOT NULL,
         completed INTEGER DEFAULT 0,
         due_date DATETIME,
+        alarm_enabled INTEGER DEFAULT 1,
+        alarm_triggered INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
@@ -52,6 +54,19 @@ db.serialize(() => {
         if (!err && columns && !columns.find(c => c.name === 'token')) {
             db.run('ALTER TABLE users ADD COLUMN token TEXT');
             console.log('Added token column to users table');
+        }
+    });
+    
+    db.run('PRAGMA table_info(tasks)', (err, columns) => {
+        if (!err && columns) {
+            if (!columns.find(c => c.name === 'alarm_enabled')) {
+                db.run('ALTER TABLE tasks ADD COLUMN alarm_enabled INTEGER DEFAULT 1');
+                console.log('Added alarm_enabled column');
+            }
+            if (!columns.find(c => c.name === 'alarm_triggered')) {
+                db.run('ALTER TABLE tasks ADD COLUMN alarm_triggered INTEGER DEFAULT 0');
+                console.log('Added alarm_triggered column');
+            }
         }
     });
 });
@@ -134,7 +149,7 @@ app.post('/api/logout', authenticate, (req, res) => {
 
 // CREATE - Add a new task
 app.post('/api/tasks', authenticate, (req, res) => {
-    const { title, due_date } = req.body;
+    const { title, due_date, alarm_enabled } = req.body;
     
     // Validation: Prevent empty tasks
     if (!title || !title.trim()) {
@@ -151,14 +166,17 @@ app.post('/api/tasks', authenticate, (req, res) => {
         }
     }
     
-    db.run('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', 
-        [req.user.id, trimmedTitle, due_date || null], 
+    const alarmOn = alarm_enabled !== false ? 1 : 0;
+    
+    db.run('INSERT INTO tasks (user_id, title, due_date, alarm_enabled) VALUES (?, ?, ?, ?)', 
+        [req.user.id, trimmedTitle, due_date || null, alarmOn], 
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ 
                 id: this.lastID, 
                 title: trimmedTitle, 
                 due_date,
+                alarm_enabled: alarmOn,
                 completed: 0,
                 created_at: new Date().toISOString()
             });
@@ -174,14 +192,31 @@ app.get('/api/tasks', authenticate, (req, res) => {
     });
 });
 
-// READ - Get overdue tasks (for alarm checking)
-app.get('/api/tasks/overdue', authenticate, (req, res) => {
+// READ - Get tasks that are due (for alarm checking)
+app.get('/api/tasks/due', authenticate, (req, res) => {
     const now = new Date().toISOString();
-    db.all('SELECT * FROM tasks WHERE user_id = ? AND completed = 0 AND due_date < ?', 
+    db.all(`SELECT * FROM tasks 
+            WHERE user_id = ? 
+            AND completed = 0 
+            AND alarm_enabled = 1 
+            AND alarm_triggered = 0
+            AND due_date <= ?`, 
         [req.user.id, now], 
         (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
+        }
+    );
+});
+
+// READ - Mark task alarm as triggered
+app.post('/api/tasks/:id/trigger-alarm', authenticate, (req, res) => {
+    const { id } = req.params;
+    db.run('UPDATE tasks SET alarm_triggered = 1 WHERE id = ? AND user_id = ?', 
+        [id, req.user.id], 
+        function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Alarm triggered' });
         }
     );
 });
